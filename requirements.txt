@@ -3,5 +3,6 @@ fastapi==0.142.2
 uvicorn[standard]==0.54.0
 pydantic==2.13.5
 boto3==1.43.108
-# strands-agents — week 2 (agent orchestration, AWS Builder mini-challenge)
-# strands-agents>=1.0
+strands-agents
+# strands-agents: agent orchestration (AWS Builder mini-challenge). Pinned loosely
+# on purpose — the SDK moves fast; requirements freeze at release.

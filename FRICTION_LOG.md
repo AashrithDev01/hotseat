@@ -42,3 +42,17 @@ so we log everything: what we tried, what broke, what worked, what we'd change.
   the v2 migration guide first.
 - **Feature request for the vendor:** Keep a `Server.list_tools` compatibility
   shim (or a louder error message pointing at `MCPServer`).
+
+### 2026-10-03 — Strands `BedrockModel` eager credential lookup
+- **What we were doing:** Constructing Strands agents in a test environment
+  without AWS credentials.
+- **What happened:** `BedrockModel.__init__` immediately calls
+  `boto3.session.client(...)`, which triggers the credential chain — with no
+  keys set it falls through to IMDS, which fails behind our proxy. Agent
+  *construction* shouldn't need credentials; only *invocation* should.
+- **Workaround / fix:** Set dummy `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`
+  env vars in tests (client creation makes no network calls). In production
+  `make_client()` only builds the Strands backend when real creds exist.
+- **Would use again?** Yes — with the lazy-construction caveat documented.
+- **Feature request for the vendor:** Defer client/credential resolution to
+  first invoke, not `__init__`.

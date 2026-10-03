@@ -92,7 +92,50 @@ class BedrockLLMClient(LLMClient):
 
 
 def make_client() -> LLMClient:
-    """Bedrock when credentials are present, mock otherwise."""
+    """Strands agents on Bedrock when credentials are present, mock otherwise."""
     if os.environ.get("AWS_ACCESS_KEY_ID") and os.environ.get("AWS_SECRET_ACCESS_KEY"):
-        return BedrockLLMClient()
+        from ..agents.strands_backend import StrandsBackend
+
+        return StrandsLLMClient(StrandsBackend())
     return MockLLMClient()
+
+
+class StrandsLLMClient(LLMClient):
+    """LLMClient backed by Strands agents.
+
+    The engine keeps calling complete(system, messages) exactly as before —
+    but behind the interface, each distinct system prompt gets a real cached
+    Strands Agent instead of a one-shot LLM call. Same contract, agent brains.
+    """
+
+    def __init__(self, backend=None) -> None:
+        from ..agents.strands_backend import StrandsBackend, _text_of
+
+        self.backend = backend or StrandsBackend()
+        self._text_of = _text_of
+        self._agents: dict[str, Agent] = {}
+
+    def _agent_for(self, system: str):
+        from strands import Agent
+
+        if system not in self._agents:
+            self._agents[system] = Agent(
+                model=self.backend.model,
+                system_prompt=system,
+                name="hotseat-tool-agent",
+            )
+        return self._agents[system]
+
+    async def complete(
+        self,
+        system: str,
+        messages: list[dict[str, str]],
+        max_tokens: int = 1024,
+        temperature: float = 0.7,
+    ) -> str:
+        import asyncio
+
+        agent = self._agent_for(system)
+        prompt = "\n".join(f"{m['role']}: {m['content']}" for m in messages)
+        result = await asyncio.to_thread(agent, prompt)
+        return self._text_of(result)

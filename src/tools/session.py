@@ -112,6 +112,13 @@ async def _persona_utterance(
 
 async def _evaluate(llm: LLMClient, session: Session, answer_text: str) -> TurnScore:
     from ..agents.evaluator import EVALUATOR_SYSTEM_PROMPT
+    from ..llm.client import StrandsLLMClient
+
+    # Agent path: typed TurnScore straight from the evaluator agent. No JSON parsing.
+    if isinstance(llm, StrandsLLMClient):
+        return await llm.backend.evaluate(
+            session.config.mode.value, answer_text
+        )
 
     rubric = rubric_for_mode(session.config.mode.value)
     rubric_text = "\n".join(f"- {k}: {v}" for k, v in rubric.items())
