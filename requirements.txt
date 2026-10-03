@@ -1,10 +1,13 @@
-mcp==2.2.0
+mcp==2.1.1
+# mcp pinned <2.2: strands-agents 1.57.2 requires mcp<2.2,>=1.23.0.
+# Verified: MCPServer, @mcp.tool(), streamable_http_app() with
+# transport_security + stateless_http all present in 2.1.1.
 fastapi==0.142.2
 uvicorn[standard]==0.54.0
 pydantic==2.13.5
 boto3==1.43.108
-strands-agents
-# strands-agents: agent orchestration (AWS Builder mini-challenge). Pinned loosely
-# on purpose — the SDK moves fast; requirements freeze at release.
+strands-agents==1.57.2
+# strands-agents: agent orchestration (AWS Builder mini-challenge). PINNED —
+# a 0.0.1 placeholder squats a similar name; unpinned resolves to the wrong one.
 moto  # mock AWS for tests (DynamoDB store verified without touching real AWS)
 mangum  # ASGI adapter: runs our Starlette app on Lambda

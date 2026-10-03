@@ -56,3 +56,18 @@ so we log everything: what we tried, what broke, what worked, what we'd change.
 - **Would use again?** Yes — with the lazy-construction caveat documented.
 - **Feature request for the vendor:** Defer client/credential resolution to
   first invoke, not `__init__`.
+
+### 2026-10-03 — Dependency hell: `strands-agents` vs `mcp` version pin
+- **What we were doing:** Building the Lambda deployment zip.
+- **What happened (1):** An unpinned `strands-agents` in requirements resolved
+  to a 0.0.1 placeholder squatting a similar package name — the zip shipped
+  `strands_agents/` (wrong) instead of `strands/` (right). Lambda died with
+  `ModuleNotFoundError: No module named 'strands'`.
+- **What happened (2):** Pinning `strands-agents==1.57.2` exposed the real
+  conflict: it requires `mcp<2.2,>=1.23.0`, but we had `mcp==2.2.0`.
+- **Fix:** Pinned `mcp==2.1.1` (verified: `MCPServer`, `@mcp.tool()`,
+  `streamable_http_app()` with `transport_security` + `stateless_http` all
+  present) and `strands-agents==1.57.2`; added `--force-reinstall
+  --no-cache-dir` to the packaging script so the zip is deterministic.
+- **Lesson:** Unpinned dependencies are a ticking bomb — what resolves today
+  may not resolve tomorrow. Pin everything that ships.

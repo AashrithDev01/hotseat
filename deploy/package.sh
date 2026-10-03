@@ -12,11 +12,13 @@ echo "==> cleaning $PKG"
 rm -rf "$PKG" "$ZIP"
 mkdir -p "$PKG"
 
-echo "==> installing dependencies (excluding boto3/botocore: already in Lambda runtime)"
-"$ROOT/.venv/bin/pip" install -q \
-  --target "$PKG" \
-  --exclude boto3 --exclude botocore \
+echo "==> installing dependencies (pinned, force-reinstall, no cache)"
+"$ROOT/.venv/bin/pip" install -q --target "$PKG" \
+  --force-reinstall --no-cache-dir \
   -r "$ROOT/requirements.txt"
+
+echo "==> removing boto3/botocore (already in Lambda runtime)"
+rm -rf "$PKG/boto3" "$PKG/botocore" "$PKG/boto3-"*".dist-info" "$PKG/botocore-"*".dist-info"
 
 echo "==> copying src/"
 cp -r "$ROOT/src" "$PKG/src"
