@@ -100,20 +100,27 @@ async def get_session_report(session_id: str) -> str:
 
 
 def _transport_security() -> TransportSecuritySettings | None:
-    """Host allow-list for the MCP endpoint.
+    """Host + origin allow-lists for the MCP endpoint.
 
-    Local dev: leave MCP_ALLOWED_HOSTS unset -> SDK defaults to localhost-only.
-    Lambda: set MCP_ALLOWED_HOSTS to the Function URL host (no scheme, no port),
-    e.g. "abc123.lambda-url.us-east-2.on.aws". The SDK also accepts "host:*"
-    patterns; we add ":*" so any port matches.
+    Local dev: leave both unset -> SDK defaults to localhost-only.
+    Lambda:
+      MCP_ALLOWED_HOSTS = Function URL host (no scheme/port), e.g.
+        "abc123.lambda-url.us-east-2.on.aws". Validates the Host header
+        (DNS rebinding protection). We add ":*" so any port matches.
+      MCP_ALLOWED_ORIGINS = comma-separated frontend origins allowed to call
+        the API from a browser, e.g. "https://muse.ai". Validates the Origin
+        header. The SDK matches origins exactly (only ":*" port wildcards).
     """
-    raw = os.environ.get("MCP_ALLOWED_HOSTS", "").strip()
-    if not raw:
+    raw_hosts = os.environ.get("MCP_ALLOWED_HOSTS", "").strip()
+    raw_origins = os.environ.get("MCP_ALLOWED_ORIGINS", "").strip()
+    if not raw_hosts and not raw_origins:
         return None  # SDK default: localhost-only protection
-    bare = [h.strip() for h in raw.split(",") if h.strip()]
-    # Bare host (Lambda sends no port) AND host:* (SDK wildcard needs a port).
-    hosts = bare + [f"{h}:*" for h in bare]
-    origins = [f"https://{h}" for h in bare]
+    hosts = []
+    for h in raw_hosts.split(","):
+        h = h.strip()
+        if h:
+            hosts += [h, f"{h}:*"]
+    origins = [o.strip() for o in raw_origins.split(",") if o.strip()]
     return TransportSecuritySettings(
         enable_dns_rebinding_protection=True,
         allowed_hosts=hosts,

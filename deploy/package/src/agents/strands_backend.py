@@ -27,7 +27,7 @@ from .personas import PERSONAS
 from ..models.session import TurnScore
 
 DEFAULT_MODEL_ID = os.environ.get(
-    "BEDROCK_MODEL_ID", "global.anthropic.claude-sonnet-4-6-v1:0"
+    "BEDROCK_MODEL_ID", "global.anthropic.claude-sonnet-4-6"
 )
 DEFAULT_REGION = os.environ.get("AWS_REGION", "us-east-2")
 

@@ -61,6 +61,9 @@ After creating the Function URL, copy just the hostname
 (`abc123.lambda-url.us-east-2.on.aws` — no `https://`) and add one more
 environment variable:
 - `MCP_ALLOWED_HOSTS` = `abc123.lambda-url.us-east-2.on.aws`
+- `MCP_ALLOWED_ORIGINS` = `https://muse.ai` (comma-separated; the websites
+  allowed to call the API from a browser — the SDK checks the Origin header
+  exactly, so list every frontend origin)
 
 Then redeploy the function (Deploy > Deploy) so the new var takes effect.
 
