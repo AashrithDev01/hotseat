@@ -1,7 +1,7 @@
 """start_session + submit_answer tools.
 
-The shared session engine for both modes. In-memory store for local dev;
-DynamoDB-backed in production (week 2).
+The shared session engine for both modes. Sessions live behind a
+SessionStore interface — memory locally, DynamoDB on AWS.
 """
 
 from __future__ import annotations
@@ -22,9 +22,11 @@ from ..models.session import (
     SessionTurn,
     TurnScore,
 )
+from ..store import make_store
 
-# In-memory session store (local dev). TODO (week 2): DynamoDB.
-_SESSIONS: dict[str, Session] = {}
+# The engine's memory. make_store() picks DynamoDB when HOTSEAT_SESSIONS_TABLE
+# is set (AWS), otherwise the in-memory dict (local dev). Week 2: done.
+STORE = make_store()
 
 
 async def start_session(
@@ -38,14 +40,14 @@ async def start_session(
     session = Session(config=config, brief=brief)
     opener = await _persona_utterance(llm, session, config.personas[0], opening=True)
     session.turns.append(SessionTurn(speaker=config.personas[0], text=opener))
-    _SESSIONS[session.session_id] = session
+    STORE.save(session)
     return session
 
 
 async def submit_answer(
     llm: LLMClient, session_id: str, answer_text: str
 ) -> dict:
-    session = _SESSIONS.get(session_id)
+    session = STORE.get(session_id)
     if session is None:
         raise KeyError(f"Unknown session: {session_id}")
     if session.status != "active":
@@ -65,6 +67,7 @@ async def submit_answer(
             llm, session, last_persona, follow_up_hint=score.follow_up_hint
         )
         session.turns.append(SessionTurn(speaker=last_persona, text=follow_up))
+        STORE.save(session)
         return {"type": "follow_up", "persona": last_persona, "text": follow_up, "score": score}
 
     # Otherwise advance: rotate to the next persona in the panel.
@@ -73,6 +76,7 @@ async def submit_answer(
     session.turns.append(SessionTurn(speaker=next_persona, text=question))
     if len([t for t in session.turns if t.speaker == "user"]) >= session.config.max_turns:
         session.status = "completed"
+    STORE.save(session)
     return {"type": "next_question", "persona": next_persona, "text": question, "score": score}
 
 

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from ..llm.client import LLMClient
 from ..models.session import Session, SessionMode
-from .session import _SESSIONS
+from .session import STORE
 
 REPORT_SYSTEM = """\
 You write the HotSeat session report. Given the brief and the full turn history
@@ -25,7 +25,7 @@ Then the artifact:
 
 
 async def get_session_report(llm: LLMClient, session_id: str) -> dict:
-    session = _SESSIONS.get(session_id)
+    session = STORE.get(session_id)
     if session is None:
         raise KeyError(f"Unknown session: {session_id}")
 
@@ -55,6 +55,7 @@ async def get_session_report(llm: LLMClient, session_id: str) -> dict:
             "Wire up BedrockLLMClient for the full scored report."
         )
     session.status = "completed"
+    STORE.save(session)
     artifact = (
         "thank_you_email"
         if session.config.mode == SessionMode.INTERVIEW
