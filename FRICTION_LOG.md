@@ -71,3 +71,13 @@ so we log everything: what we tried, what broke, what worked, what we'd change.
   --no-cache-dir` to the packaging script so the zip is deterministic.
 - **Lesson:** Unpinned dependencies are a ticking bomb — what resolves today
   may not resolve tomorrow. Pin everything that ships.
+
+## 2026-10-03 — Lambda go-live debugging (model ID + IAM)
+- **Symptom:** HTTP 502 → `ModuleNotFoundError: No module named 'strands'` → after fixing packaging, `ValidationException: The provided model identifier is invalid` → then `AccessDeniedException` on `bedrock:InvokeModelWithResponseStream`.
+- **Root causes (3 layered):**
+  1. I had invented the model ID `global.anthropic.claude-sonnet-4-6-v1:0` by pattern-matching; the real inference profile ID is `global.anthropic.claude-sonnet-4-6` (no `-v1:0`). Found via Bedrock console → Inference profiles.
+  2. Policy only allowed `bedrock:InvokeModel`; Strands streams, so `bedrock:InvokeModelWithResponseStream` is required.
+  3. Bedrock authorizes against the *underlying* foundation-model ARN (`arn:aws:bedrock:::foundation-model/anthropic.claude-sonnet-4-6`, region-less), not the `global.` inference-profile ID — non-obvious.
+- **Fix:** corrected `BEDROCK_MODEL_ID` env var; rewrote `deploy/iam-policy.json` with wildcard model/profile ARNs (future-proof for model swaps).
+- **Lesson:** never reconstruct a Bedrock model ID from memory — copy it verbatim from the console. And when Bedrock denies, read the *resource* in the error: it tells you exactly which ARN to allow.
+- **Result:** full MCP end-to-end (analyze_brief → start_session → submit_answer → get_session_report) passing on the live Lambda URL.
