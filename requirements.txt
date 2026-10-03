@@ -7,3 +7,4 @@ strands-agents
 # strands-agents: agent orchestration (AWS Builder mini-challenge). Pinned loosely
 # on purpose — the SDK moves fast; requirements freeze at release.
 moto  # mock AWS for tests (DynamoDB store verified without touching real AWS)
+mangum  # ASGI adapter: runs our Starlette app on Lambda

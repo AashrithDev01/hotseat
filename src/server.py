@@ -10,8 +10,10 @@ MCP endpoint: http://localhost:8000/mcp
 from __future__ import annotations
 
 import json
+import os
 
 from mcp.server.mcpserver import MCPServer
+from mcp.server.transport_security import TransportSecuritySettings
 
 from .agents.personas import PERSONAS
 from .llm.client import make_client
@@ -97,4 +99,39 @@ async def get_session_report(session_id: str) -> str:
     return json.dumps(result, indent=2)
 
 
-app = mcp.streamable_http_app()
+def _transport_security() -> TransportSecuritySettings | None:
+    """Host allow-list for the MCP endpoint.
+
+    Local dev: leave MCP_ALLOWED_HOSTS unset -> SDK defaults to localhost-only.
+    Lambda: set MCP_ALLOWED_HOSTS to the Function URL host (no scheme, no port),
+    e.g. "abc123.lambda-url.us-east-2.on.aws". The SDK also accepts "host:*"
+    patterns; we add ":*" so any port matches.
+    """
+    raw = os.environ.get("MCP_ALLOWED_HOSTS", "").strip()
+    if not raw:
+        return None  # SDK default: localhost-only protection
+    bare = [h.strip() for h in raw.split(",") if h.strip()]
+    # Bare host (Lambda sends no port) AND host:* (SDK wildcard needs a port).
+    hosts = bare + [f"{h}:*" for h in bare]
+    origins = [f"https://{h}" for h in bare]
+    return TransportSecuritySettings(
+        enable_dns_rebinding_protection=True,
+        allowed_hosts=hosts,
+        allowed_origins=origins,
+    )
+
+
+def create_app():
+    """Build a fresh MCP app. Called once for uvicorn; per-invocation on Lambda
+    (the SDK's session manager runs its lifespan exactly once per instance,
+    and Mangum re-runs lifespan every invocation — so Lambda needs a new app
+    each time)."""
+    return mcp.streamable_http_app(
+        transport_security=_transport_security(),
+        # Lambda: stateless (each invocation independent). Local: stateful.
+        stateless_http=os.environ.get("MCP_STATELESS", "").lower() in ("1", "true", "yes"),
+    )
+
+
+# The long-lived app for `uvicorn src.server:app`.
+app = create_app()
