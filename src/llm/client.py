@@ -59,7 +59,7 @@ class BedrockLLMClient(LLMClient):
         import boto3
 
         self.model_id = model_id or os.environ.get(
-            "BEDROCK_MODEL_ID", "global.anthropic.claude-sonnet-4-6-v1:0"
+            "BEDROCK_MODEL_ID", "global.anthropic.claude-sonnet-4-6"
         )
         self.region = region or os.environ.get("AWS_REGION", "us-east-2")
         self._client = boto3.client("bedrock-runtime", region_name=self.region)

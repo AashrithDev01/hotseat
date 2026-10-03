@@ -41,7 +41,7 @@ Then: Code > Upload from > `.zip file` > select `deploy/hotseat-lambda.zip`.
 Configuration > Environment variables:
 - `HOTSEAT_SESSIONS_TABLE` = `hotseat-sessions`
 - `AWS_REGION` = `us-east-2`
-- `BEDROCK_MODEL_ID` = `global.anthropic.claude-sonnet-4-6-v1:0`
+- `BEDROCK_MODEL_ID` = `global.anthropic.claude-sonnet-4-6`
 - `MCP_STATELESS` = `1` (each Lambda invocation independent — required)
 
 (No API keys — Lambda's IAM role provides credentials automatically.)
